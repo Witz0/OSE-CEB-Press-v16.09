@@ -25,20 +25,23 @@ Hmm thought this was best copyleft, but previous code was CC-BY-SA need to doubl
 
 #define MODE_SELECT 9
 #define SOLENOID_RIGHT 23
-#define SOLENOID_LEFT 24	//PWM capable pins
-#define SOLENOID_DOWN 25	//PWM
-#define SOLENOID_UP 26		//PWM
+#define SOLENOID_LEFT 24  //PWM capable pins
+#define SOLENOID_DOWN 25  //PWM
+#define SOLENOID_UP 26    //PWM
 #define PRESSURE_SENSOR 38  //A0 F0 10 bit A2D converter
 
-#define COMPRESS_DELAY 500	// 1/2 sec extra to compress brick via main Cyl
+#define COMPRESS_DELAY 500  // 1/2 sec extra to compress brick via main Cyl
 //#define DRIFT_ADJUST ?
 //#define CYLA ?
 //#define RODA ?
 
+// custom structures functions declarations and prototypes
+bool readMode();
 
 void setup() {
-	
- //constants for math?
+  
+ //volatiles and constants for math?
+ 
  
  //initialize pin I/O
  pinMode(MODE_SELECT, INPUT);
@@ -52,11 +55,6 @@ void setup() {
  digitalWrite(MODE_SELECT, INPUT_PULLUP);
  digitalWrite(PRESSURE_SENSOR, INPUT_PULLUP);
  
- //setup interrupt to mode selector
- 
- //volatiles for possible pause/intterupt
- 
- 
 
 }
 
@@ -69,16 +67,33 @@ Main Cylinder is set to apropriate position for block thichness
 Secondary is correctly centered in middle position
 
 */
-//Step 1 Retraction measure T_ret until Presure sensor high
 
-//Step 2 Ejection by extending main cyl until pressure sensor high measure T_ext
+unsigned long previousMillis = 0;
 
-//Step 3 Brick Removal 2ndCyl extended until PPresure sensor high
+//poll selector switch continuously
+while(!readMode() == HIGH) {
 
-//Step 4 Soil Load main Cyl moves down and soil enters chamber measure T_ret
+	//Step 1 Retraction measure T_ret until Presure sensor high
 
-//Step 5 Chamber/Drawer Closure T_mid is calculated from T_ret
+	digitalWrite(SOLENOID_LEFT, HIGH);
 
-//Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+	//Step 2 Ejection by extending main cyl until pressure sensor high measure T_ext
 
+	//Step 3 Brick Removal 2ndCyl extended until PPresure sensor high
+
+	//Step 4 Soil Load main Cyl moves down and soil enters chamber measure T_ret
+
+	//Step 5 Chamber/Drawer Closure T_mid is calculated from T_ret
+
+	//Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+
+ }
+}
+
+//end of main
+//custom functions
+
+bool readMode(){
+	
+	
 }
