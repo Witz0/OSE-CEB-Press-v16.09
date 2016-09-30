@@ -21,10 +21,10 @@ See GPLv3 license file in repo.
 
 #define MODE_SELECT 9
 #define SOLENOID_RIGHT 23
-#define SOLENOID_LEFT 24	//PWM capable
+#define SOLENOID_LEFT 24	//PWM capable pins
 #define SOLENOID_DOWN 25	//PWM
 #define SOLENOID_UP 26		//PWM
-#define PRESSURE_SENSOR 38  //A0
+#define PRESSURE_SENSOR 38  //A0 F0 10 bit A2D converter
 
 #define COMPRESS_DELAY 500	// 1/2 sec extra to compress brick via main Cyl
 //#define DRIFT_ADJUST ?
@@ -55,11 +55,22 @@ void setup() {
 void loop() {
 /*
 Auto mode starting assumptions
-Earth has been  loaded into chamber in manual setup?
+system is empty of earth and ready to measure motion time
 no pressure on lines
 Main Cylinder is set to apropriate position for block thichness
 Secondary is correctly centered in middle position
-*/
 
+*/
+//Step 1 Retraction measure T_ret until Presure sensor high
+
+//Step 2 Ejection by extending main cyl until pressure sensor high measure T_ext
+
+//Step 3 Brick Removal 2ndCyl extended until PPresure sensor high
+
+//Step 4 Soil Load main Cyl moves down and soil enters chamber measure T_ret
+
+//Step 5 Chamber/Drawer Closure T_mid is calculated from T_ret
+
+//Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
 
 }
