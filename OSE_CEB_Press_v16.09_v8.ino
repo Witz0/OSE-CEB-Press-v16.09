@@ -13,9 +13,13 @@ Abe Anderson
 
 License:
 See GPLv3 license file in repo.
+Hmm thought this was best copyleft, but previous code was CC-BY-SA need to double check
 
 */
 
+//includes make sure correct Teensy libs get included if any are needed
+//Teensyduino add-on software v1.30 is compatible with arduino IDE 1.6.11
+//#include "Aurduino.h"
 
 //Heavy use of defines may make it easier for non coders to make adjustments for troubleshooting and custom changes
 
@@ -43,6 +47,10 @@ void setup() {
  pinMode(SOLENOID_DOWN, OUTPUT);
  pinMode(SOLENOID_UP, OUTPUT);
  pinMode(PRESSURE_SENSOR, INPUT);
+ 
+ //Enable internal Pullup resistors on inputs for reading sensors
+ digitalWrite(MODE_SELECT, INPUT_PULLUP);
+ digitalWrite(PRESSURE_SENSOR, INPUT_PULLUP);
  
  //setup interrupt to mode selector
  
