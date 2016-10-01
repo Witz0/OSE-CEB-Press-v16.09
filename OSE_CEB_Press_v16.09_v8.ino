@@ -4,10 +4,12 @@
   measures piston motion time relative to pressure sensor trigger,
   and repeats cycle while auto calibrating timing from previous cycles and startup positions.
   Compensates for difference in time for Extension and Contraction of Rods.
-  T_extend = T_contract  * (A_cyl - A_rod) / A_cyl
+  T_extend = T_contract  * (A_cyl - A_rod) / A_cyl)
   Detects lack of soil by extreme extent of main Cylinder
   Faults require manual user reset to proper starting position.
   User must manually compress brick(s) to verify correct machine function before engaging Auto Mode.
+
+  Code is written for novice readability and not code efficiency. Not much encapsulation. Math is written longer form etc.
 
   Contributions by:
   Abe Anderson
@@ -70,9 +72,9 @@ void loop() {
   unsigned long previousMillis = 0;
   //unsigned long currentMillis = 0;
   static unsigned long drawerRetTime;   //measured
-  static unsigned long drawerRetTimeAvg;    //keep running average of drawer Cyl Retraction Time to compare to check for  drift
+  static unsigned long drawerRetTimeAvg = 0;    //keep running average of drawer Cyl Retraction Time to compare to check for  drift
   static unsigned long mainExtTime;   //measured
-  static unsigned long mainExtTimeAvg;    //keep running average of main Cyl Extension Time to compare to check for  drift
+  static unsigned long mainExtTimeAvg = 0;    //keep running average of main Cyl Extension Time to compare to check for  drift
   unsigned long drawerExtTime;    //calculated from drawer retraction from middle start point
   unsigned long mainRetTime;    //calculated from main ejection extension time from start point
   unsigned long drawerMidTime;    //calculated from drawer retraction from middle start point
@@ -88,18 +90,38 @@ void loop() {
       previousMillis = millis();
       digitalWrite(SOLENOID_RIGHT, HIGH);
     }
-    drawerRetTime = millis() - previousMillis;
     digitalWrite(SOLENOID_RIGHT, LOW);
+    drawerRetTime = millis() - previousMillis;
+    /*
+        if (drawerRetTimeAvg == 0) {
+          drawerRetTimeAvg = drawerRetTime;
+          drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
+        } else {
+          drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
+        }
 
+        drawerRetTime = constrain(drawerRetTime, drawerRetTime, drawerRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
+    */
 
     //Step 2 Ejection by extending main cyl UP until pressure sensor high measure T_ext
     while ((readPressure() == false) && (readMode() == true)) {
       previousMillis = millis();
       digitalWrite(SOLENOID_UP, HIGH);
     }
-    mainExtTime = millis() - previousMillis;
     digitalWrite(SOLENOID_UP, LOW);
-    //need to bump main cyl foot down for clearance/pressure release
+    mainExtTime = millis() - previousMillis;
+    /*
+        if (mainExtTimeAvg == 0) {
+          mainExtTimeAvg = mainExtTime;
+          mainExtTimeAvg = ((mainExtTime + mainExtTimeAvg) / 2);
+        } else {
+          mainExtTimeAvg = ((mainExtTime + mainExtTimeAvg) / 2);
+        }
+        mainExtTime = constrain(mainExtTime, mainExtTime, mainExtTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
+    */
+
+
+    //might need to bump main cyl foot down for clearance/pressure release
     //digitalWrite(SOLENOID_DOWN, HIGH);
     //delay(100)
     //digitalWrite(SOLENOID_DOWN, LOW);
@@ -110,23 +132,31 @@ void loop() {
       previousMillis = millis();
       digitalWrite(SOLENOID_LEFT, HIGH);
     }
-    drawerRetTime = millis() - previousMillis;
     digitalWrite(SOLENOID_LEFT, LOW);
 
     //Step 4 Soil Load main Cyl moves DOWN/retracts and soil enters chamber
 
     while ((readPressure() == false) && (readMode() == true)) {
-      mainRetTime = mainExtTime / kAMain;   //type issues for math may need seperate function it could also check averages.
+      mainMidTime = mainExtTime / kAMain;   //add serial out for debugging math
       previousMillis = millis();
-      while ((millis() - previousMillis) <= mainRetTime) {
+      while ((millis() - previousMillis) <= mainMidTime) {
         digitalWrite(SOLENOID_DOWN, HIGH);
       }
-      drawerRetTime = millis() - previousMillis;
       digitalWrite(SOLENOID_DOWN, LOW);
     }
-    //Step 5 Chamber/Drawer Closure T_mid is calculated from T_ret
+    //Step 5 Chamber/Drawer Closure drawer retraction time to midpoint is calculated from initial full contraction from the midpoint (step 1 measurement)
+
+    while ((readPressure() == false) && (readMode() == true)) {
+      drawerMidTime = drawerExtTime / kADrawer ;      //add serial out for debugging math
+      previousMillis = millis();
+      while ((millis() - previousMillis) <= drawerMidTime) {
+        digitalWrite(SOLENOID_RIGHT, HIGH);
+      }
+      digitalWrite(SOLENOID_RIGHT, LOW);
+    }
 
     //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+
 
   }
 }
@@ -134,7 +164,7 @@ void loop() {
 //end of main
 //custom functions
 
-//reads mode switch state HIGH is auto mode ON and LOW is AUTO mode OFF PAUSE or MANUAL due to 3 position switch
+//reads mode switch state HIGH/true is auto mode ON and LOW/false is AUTO mode OFF PAUSE or MANUAL due to 3 position switch
 bool readMode() {
   if (digitalRead(MODE_SELECT) == HIGH) {
     delay(SWITCH_DEBOUNCE);
@@ -165,16 +195,6 @@ bool readPressure() {
     return false;
   }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
