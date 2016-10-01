@@ -5,8 +5,9 @@
   and repeats cycle while auto calibrating timing from previous cycles and startup positions.
   Compensates for difference in time for Extension and Contraction of Rods.
   T_extend = T_contract  * (A_cyl - A_rod) / A_cyl)
-  Detects lack of soil by extreme extent of main Cylinder
-  Faults require manual user reset to proper starting position.
+  Detects lack of soil by extreme extent of main Cylinder during compression
+  and other faults by comparing previous times to current timing.
+  All Faults require manual user reset to proper starting position.
   User must manually compress brick(s) to verify correct machine function before engaging Auto Mode.
 
   Code is written for novice readability and not code efficiency. Not much encapsulation. Math is written longer form etc.
@@ -37,7 +38,7 @@
 #define PRESSURE_SENSOR_DEBOUNCE 20 //milliseconds to delay for pressure sensor debounce
 #define COMPRESS_DELAY 500  // 1/2 sec extra to compress brick via main Cyl
 #define K_A_MAIN 0.001  // T_e = T_c * (k_A)    *need to find correct value assuming this method makes sense*
-#define K_A_DRAWER 0.000888 // T_e = T_c * (k_A)    *calculated from [(1.126-1.25)/1.126]
+#define K_A_DRAWER 0.0008 // T_e = T_c * (k_A)    *calculated from [(1.126-1.25)/1.126] = 0.000888
 
 // custom structures, function declarations or prototypes
 bool readMode();    //function to read if auto mode switch state is ON
@@ -156,6 +157,12 @@ void loop() {
     }
 
     //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+    while ((readPressure() == false) && (readMode() == true)) {
+      previousMillis = millis();
+      digitalWrite(SOLENOID_UP, HIGH);
+    }
+    delay(COMPRESS_DELAY);
+    digitalWrite(SOLENOID_UP, LOW);
 
 
   }
