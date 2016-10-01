@@ -81,10 +81,10 @@ void loop() {
   static float kADrawer = K_A_DRAWER;
 
   //poll selector switch continuously
-  while (readMode() == HIGH) {
+  while (readMode() == true) {
 
     //Step 1 Retraction 2nd Cyl RIGHT measure T_ret at Presure sensor high
-    while (readPressure() == LOW && readMode() == HIGH) {
+    while ((readPressure() == false) && (readMode() == true)) {
       previousMillis = millis();
       digitalWrite(SOLENOID_RIGHT, HIGH);
     }
@@ -93,7 +93,7 @@ void loop() {
 
 
     //Step 2 Ejection by extending main cyl UP until pressure sensor high measure T_ext
-    while (readPressure() == LOW && readMode() == HIGH) {
+    while ((readPressure() == false) && (readMode() == true)) {
       previousMillis = millis();
       digitalWrite(SOLENOID_UP, HIGH);
     }
@@ -106,7 +106,7 @@ void loop() {
 
     //Step 3 Brick Removal 2nd Cyl extended LEFT until Presure sensor high
 
-    while (readPressure() == LOW && readMode() == HIGH) {
+    while ((readPressure() == false) && (readMode() == true)) {
       previousMillis = millis();
       digitalWrite(SOLENOID_LEFT, HIGH);
     }
@@ -115,8 +115,8 @@ void loop() {
 
     //Step 4 Soil Load main Cyl moves DOWN/retracts and soil enters chamber
 
-    while (readPressure() == LOW && readMode() == HIGH) {
-      mainRetTime = mainExtTime / K_A_MAIN;   //type issues for math may need seperate function it could also check averages.
+    while ((readPressure() == false) && (readMode() == true)) {
+      mainRetTime = mainExtTime / kAMain;   //type issues for math may need seperate function it could also check averages.
       previousMillis = millis();
       while ((millis() - previousMillis) <= mainRetTime) {
         digitalWrite(SOLENOID_DOWN, HIGH);
@@ -141,7 +141,9 @@ bool readMode() {
     if (digitalRead(MODE_SELECT) == HIGH) {
       return true;
     }
-    else return false;
+    else {
+      return false;
+    }
   }
   else {
     return false;
@@ -155,13 +157,24 @@ bool readPressure() {
     if (digitalRead(PRESSURE_SENSOR) == HIGH) {
       return true;
     }
-    else return false;
+    else {
+      return false;
+    }
   }
-
   else {
     return false;
   }
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
