@@ -78,17 +78,33 @@ void loop() {
   static bool calibrated = false;   //sets state for first cycle calibration of main Cyl
   unsigned long previousMillis = 0;
   //unsigned long currentMillis = 0;
+  /*
+     Need to find max expected size of values and reduce unnecessary static unsigned longs etc. for execution efficiency
+  */
   static unsigned long drawerRetTime = 0;   //measured
   static unsigned long drawerRetTimePre = 0;    //keep running average of drawer Cyl Retraction Time to compare to check for  drift
+
+  unsigned long mainRetTime;    //first reatraction measured post manual brick compression and pre auto ejection
   static unsigned long mainRetTimePre = 0;    //keep running average of main Cyl Retraction Time to check for  drift
+
+  static unsigned long mainEjcTime = 0;
+  static unsigned long mainEjcTimePre = 0;
+
   static unsigned long mainCompTime = 0;   //measured
   static unsigned long mainCompTimePre = 0;    //keep running average of main Cyl Extension Time to compare to check for  drift
-  unsigned long drawerExtTime;    //calculated from drawer retraction from middle start point to fully contracted
-  unsigned long mainRetTime;    //first reatraction measured post brick compression and pre ejection
+
+  unsigned long drawerExtTime;
+  unsigned long drawerExtTimePre;   //calculated from drawer retraction from middle start point to fully contracted
+
   unsigned long drawerMidTime;    //time for retraction from removal point to mid point calculated from step 1 then measured and compared at every cycle.
+  unsigned long drawerMidTimePre;
+
   //  unsigned long mainMidTime;    //calculated from main ejection extension time from start point
   static float kAMain = K_A_MAIN;   //multiplier Note: if 1 isnt accurate enough for high speeds 2 or 3 could be used instead as opposed to calculus?
   static float kADrawer = K_A_DRAWER;
+  unsigned long minimum = 0;
+  unsigned long maximum = 0;
+  byte drift = 0;
 
   //poll selector switch continuously and check for fault condition at start of every cycle
   while (autoMode() == true && noFaults == true) {
@@ -113,7 +129,10 @@ void loop() {
           }
           else {
             if (drawerRetTime != drawerRetTimePre) {
-              if (max(drawerRetTime, drawerRetTimePre) - min(drawerRetTime, drawerRetTimePre)) > MAXDRIFT) {
+              minimum = min(drawerRetTime, drawerRetTimePre);
+              maximum = max(drawerRetTime, drawerRetTimePre);
+              drift = maximum - minimum;
+              if (drift > MAXDRIFT) {
                 noFaults = false;
                 break;
               }
