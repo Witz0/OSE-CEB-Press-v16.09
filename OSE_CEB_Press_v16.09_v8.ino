@@ -92,118 +92,134 @@ void loop() {
   //poll selector switch continuously
   while (autoMode() == true && noFaults == true) {
 
-
     /*add logic switch statement to cycle position and help resume from pause?
       clean up messy code?
     */
+    switch (cycleStep) {
 
-    //Step 1 Retraction 2nd Cyl RIGHT measure T_ret at Presure sensor high
-    while ((lowPressure() == true) && (autoMode() == true)) {
-      previousMillis = millis();
-      digitalWrite(SOLENOID_RIGHT, HIGH);
-    }
-    digitalWrite(SOLENOID_RIGHT, LOW);
-    drawerRetTime = millis() - previousMillis;
+      //Step 1 Retraction 2nd Cyl RIGHT measure T_ret at Presure sensor high
+      case 1:
+        {
+          while ((lowPressure() == true) && (autoMode() == true)) {
+            previousMillis = millis();
+            digitalWrite(SOLENOID_RIGHT, HIGH);
+          }
+          digitalWrite(SOLENOID_RIGHT, LOW);
+          drawerRetTime = millis() - previousMillis;
 
-    /*
-        if (drawerRetTimeAvg == 0) {
-          drawerRetTimeAvg = drawerRetTime;
-          drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
-        } else {
-          drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
+          /*
+              if (drawerRetTimeAvg == 0) {
+                drawerRetTimeAvg = drawerRetTime;
+                drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
+              } else {
+                drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
+              }
+
+              drawerRetTime = constrain(drawerRetTime, drawerRetTime, drawerRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
+          */
         }
 
-        drawerRetTime = constrain(drawerRetTime, drawerRetTime, drawerRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
-    */
+      //Step 2 Ejection by extending main cyl UP until pressure sensor high measure T_ext
+      case 2:
+        {
+          //Run first cycle calibration main retraction if first cycle or state is set due to faults
+          if (calibrated == false) {
+            while ((lowPressure() == true) && (autoMode() == true)) {
+              previousMillis = millis();
+              digitalWrite(SOLENOID_DOWN, HIGH);
+            }
+            digitalWrite(SOLENOID_DOWN, LOW);
+            mainRetTime = millis() - previousMillis;
+            calibrated = true;
 
-    //Step 2 Ejection by extending main cyl UP until pressure sensor high measure T_ext
-    //Run first cycle calibration main retraction if first cycle or state is set due to faults
-    if (calibrated == false) {
-      while ((lowPressure() == true) && (autoMode() == true)) {
-        previousMillis = millis();
-        digitalWrite(SOLENOID_DOWN, HIGH);
-      }
-      digitalWrite(SOLENOID_DOWN, LOW);
-      mainRetTime = millis() - previousMillis;
-      calibrated = true;
-
-      while ((lowPressure() == true) && (autoMode() == true)) {
-        previousMillis = millis();
-        digitalWrite(SOLENOID_UP, HIGH);
-      }
-      digitalWrite(SOLENOID_UP, LOW);
-      mainCompTime = millis() - previousMillis;
-    }
-    else {
-      while ((lowPressure() == true) && (autoMode() == true)) {
-        //previousMillis = millis();
-        digitalWrite(SOLENOID_UP, HIGH);
-      }
-      digitalWrite(SOLENOID_UP, LOW);
-      //mainRetTime = millis() - previousMillis;
-      /*
-          if (mainRetTimeAvg == 0) {
-            mainRetTimeAvg = mainRetTime;
-            mainRetTimeAvg = ((mainRetTime + mainRetTimeAvg) / 2);
-          } else {
-            mainRetTimeAvg = ((mainRetTime + mainRetTimeAvg) / 2);
+            while ((lowPressure() == true) && (autoMode() == true)) {
+              previousMillis = millis();
+              digitalWrite(SOLENOID_UP, HIGH);
+            }
+            digitalWrite(SOLENOID_UP, LOW);
+            mainCompTime = millis() - previousMillis;
           }
-          mainRetTime = constrain(mainRetTime, mainRetTime, mainRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
-      */
+          else {
+            while ((lowPressure() == true) && (autoMode() == true)) {
+              //previousMillis = millis();
+              digitalWrite(SOLENOID_UP, HIGH);
+            }
+            digitalWrite(SOLENOID_UP, LOW);
+            //mainRetTime = millis() - previousMillis;
+            /*
+                if (mainRetTimeAvg == 0) {
+                  mainRetTimeAvg = mainRetTime;
+                  mainRetTimeAvg = ((mainRetTime + mainRetTimeAvg) / 2);
+                } else {
+                  mainRetTimeAvg = ((mainRetTime + mainRetTimeAvg) / 2);
+                }
+                mainRetTime = constrain(mainRetTime, mainRetTime, mainRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
+            */
 
 
-      //might need to bump main cyl foot down for clearance/pressure release
-      //digitalWrite(SOLENOID_DOWN, HIGH);
-      //delay(100)
-      //digitalWrite(SOLENOID_DOWN, LOW);
+            //might need to bump main cyl foot down for clearance/pressure release
+            //digitalWrite(SOLENOID_DOWN, HIGH);
+            //delay(100)
+            //digitalWrite(SOLENOID_DOWN, LOW);
+          }
+        }
+      //Step 3 Brick Removal 2nd Cyl extended LEFT until Presure sensor high
+      case 3:
+        {
+
+          while ((lowPressure() == true) && (autoMode() == true)) {
+            previousMillis = millis();
+            digitalWrite(SOLENOID_LEFT, HIGH);
+          }
+          digitalWrite(SOLENOID_LEFT, LOW);
+
+        //Step 4 Soil Load main Cyl moves DOWN/retracts and soil enters chamber
+        case 4:
+          {
+
+            while ((lowPressure() == true) && (autoMode() == true)) {
+              //mainMidTime = mainCompTime / kAMain;   //add serial out for debugging math
+              previousMillis = millis();
+              //while ((millis() - previousMillis) <= mainMidTime) {
+              digitalWrite(SOLENOID_DOWN, HIGH);
+            }
+            digitalWrite(SOLENOID_DOWN, LOW);
+          }
+        }
+
+      //Step 5 Chamber/Drawer Closure drawer retraction time to midpoint is calculated from initial full contraction from the midpoint (step 1 measurement)
+      case 5:
+        {
+
+          while ((lowPressure() == true) && (autoMode() == true)) {
+            drawerMidTime = drawerExtTime / kADrawer ;      //add serial out for debugging math
+            previousMillis = millis();
+            while ((millis() - previousMillis) <= drawerMidTime) {
+              digitalWrite(SOLENOID_RIGHT, HIGH);
+            }
+            digitalWrite(SOLENOID_RIGHT, LOW);
+          }
+        }
+
+      //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+      case 6:
+        {
+          while ((lowPressure() == true) && (autoMode() == true)) {
+            previousMillis = millis();
+            digitalWrite(SOLENOID_UP, HIGH);
+          }
+          previousMillis = millis() - previousMillis;
+          mainCompTime = previousMillis;
+          delay(COMPRESS_DELAY);
+          digitalWrite(SOLENOID_UP, LOW);
+
+          if (previousMillis != mainCompTimeAvg) {
+            noFaults = false;
+            break;
+          }
+          mainCompTimeAvg = (mainCompTime + previousMillis) / 2;
+        }
     }
-    //Step 3 Brick Removal 2nd Cyl extended LEFT until Presure sensor high
-
-    while ((lowPressure() == true) && (autoMode() == true)) {
-      previousMillis = millis();
-      digitalWrite(SOLENOID_LEFT, HIGH);
-    }
-    digitalWrite(SOLENOID_LEFT, LOW);
-
-    //Step 4 Soil Load main Cyl moves DOWN/retracts and soil enters chamber
-
-    while ((lowPressure() == true) && (autoMode() == true)) {
-      //mainMidTime = mainCompTime / kAMain;   //add serial out for debugging math
-      previousMillis = millis();
-      //while ((millis() - previousMillis) <= mainMidTime) {
-      digitalWrite(SOLENOID_DOWN, HIGH);
-    }
-    digitalWrite(SOLENOID_DOWN, LOW);
-
-    //Step 5 Chamber/Drawer Closure drawer retraction time to midpoint is calculated from initial full contraction from the midpoint (step 1 measurement)
-
-    while ((lowPressure() == true) && (autoMode() == true)) {
-      drawerMidTime = drawerExtTime / kADrawer ;      //add serial out for debugging math
-      previousMillis = millis();
-      while ((millis() - previousMillis) <= drawerMidTime) {
-        digitalWrite(SOLENOID_RIGHT, HIGH);
-      }
-      digitalWrite(SOLENOID_RIGHT, LOW);
-    }
-
-    //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
-    while ((lowPressure() == true) && (autoMode() == true)) {
-      previousMillis = millis();
-      digitalWrite(SOLENOID_UP, HIGH);
-    }
-    previousMillis = millis() - previousMillis;
-    mainCompTime = previousMillis;
-    delay(COMPRESS_DELAY);
-    digitalWrite(SOLENOID_UP, LOW);
-
-    if (previousMillis != mainCompTimeAvg) {
-      noFaults = false;
-      break;
-    }
-    mainCompTimeAvg = (mainCompTime + previousMillis) / 2;
-
-
-
   }
 }
 //end of loop
@@ -225,8 +241,7 @@ bool autoMode() {
   }
 }
 
-//reads pressure sensor state
-//Note that HIGH is false and LOW is true
+//reads pressure sensor state HIGH is false and LOW is true
 bool lowPressure() {
   if (digitalRead(PRESSURE_SENSOR) == HIGH) {
     delay(PRESSURE_SENSOR_DEBOUNCE);
