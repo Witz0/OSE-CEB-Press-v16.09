@@ -9,7 +9,6 @@
   and other faults by comparing previous times to current timing.
   Faults require manual user reset to proper starting position.
   User must manually compress brick(s) to verify correct machine function before engaging Auto Mode.
-  Alpha version can test making full size bricks to verify feasibility of timed operations.
   Serial Outputs can used to wacth timing variables of the machine during operation.
   Code is written for novice readability and not code efficiency so not enough encapsulation, math is written in longer form etc.
 
@@ -73,13 +72,13 @@ void loop() {
     and the auto mode to calculate motion times from starting positions.
   */
 
-  static byte cycleStep;
+  static byte cycleStep = 1;
   static bool noFaults = true;    //state of fault tracking
   static bool calibrated = false;   //sets state for first cycle calibration of main Cyl
   unsigned long previousMillis = 0;
   //unsigned long currentMillis = 0;
   /*
-     Need to find max expected size of values and reduce unnecessary static unsigned longs etc. for execution efficiency
+    Need to find max expected size of values and reduce unnecessary static unsigned longs etc. for execution efficiency
   */
   static unsigned long drawerRetTime = 0;   //measured
   static unsigned long drawerRetTimePre = 0;    //keep running average of drawer Cyl Retraction Time to compare to check for  drift
@@ -102,9 +101,9 @@ void loop() {
   //  unsigned long mainMidTime;    //calculated from main ejection extension time from start point
   static float kAMain = K_A_MAIN;   //multiplier Note: if 1 isnt accurate enough for high speeds 2 or 3 could be used instead as opposed to calculus?
   static float kADrawer = K_A_DRAWER;
-  unsigned long minimum = 0;
-  unsigned long maximum = 0;
-  byte drift = 0;
+  unsigned long minimum = 0;    //do math
+  unsigned long maximum = 0;    //and compare values
+  byte drift = 0;               //for timing drift tracking
 
   //poll selector switch continuously and check for fault condition at start of every cycle
   while (autoMode() == true && noFaults == true) {
@@ -134,6 +133,8 @@ void loop() {
               drift = maximum - minimum;
               if (drift > MAXDRIFT) {
                 noFaults = false;
+                calibrated = false;
+                cycleStep = 1;
                 break;
               }
             }
@@ -157,8 +158,28 @@ void loop() {
                 digitalWrite(SOLENOID_UP, HIGH);
               }
               digitalWrite(SOLENOID_UP, LOW);
-              mainCompTime = millis() - previousMillis;
+              mainEjcTime = millis() - previousMillis;
+
+              if (mainEjcTimePre == 0) {
+                mainEjcTimePre = mainEjcTime;
+              }
+              else {
+                if (mainEjcTime != mainEjcTimePre) {
+                  minimum = min(mainEjcTime, mainEjcTimePre);
+                  maximum = max(mainEjcTime, mainEjcTimePre);
+                  drift = maximum - minimum;
+                  if (drift > MAXDRIFT) {
+                    noFaults = false;
+                    calibrated = false;
+                    cycleStep = 2;
+                    break;
+                  }
+                }
+              }
+
+
             }
+            //else run brick ejection sequence
             else {
               while ((lowPressure() == true) && (autoMode() == true)) {
                 //previousMillis = millis();
@@ -166,18 +187,8 @@ void loop() {
               }
               digitalWrite(SOLENOID_UP, LOW);
               //mainRetTime = millis() - previousMillis;
-              /*
-                  if (mainRetTimePre == 0) {
-                    mainRetTimePre = mainRetTime;
-                    mainRetTimePre = ((mainRetTime + mainRetTimePre) / 2);
-                  } else {
-                    mainRetTimePre = ((mainRetTime + mainRetTimePre) / 2);
-                  }
-                  mainRetTime = constrain(mainRetTime, mainRetTime, mainRetTimePre);    //simple constraint on average time. flexible enough with variable loads?
-              */
 
-
-              //might need to bump main cyl foot down for clearance/pressure release
+              //might need to bump main cyl foot down for clearance/pressure release. Must consider how this will effect timing sequence.
               //digitalWrite(SOLENOID_DOWN, HIGH);
               //delay(100)
               //digitalWrite(SOLENOID_DOWN, LOW);
