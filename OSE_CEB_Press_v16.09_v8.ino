@@ -71,6 +71,8 @@ void loop() {
     This allows user to set brick thickness
     and the auto mode to calculate motion times from starting positions.
   */
+
+  static byte cycleStep;
   static bool noFaults = true;    //state of fault tracking
   static bool calibrated = false;   //sets state for first cycle calibration of main Cyl
   unsigned long previousMillis = 0;
@@ -89,7 +91,11 @@ void loop() {
 
   //poll selector switch continuously
   while (autoMode() == true && noFaults == true) {
-    //add switch to recall to cycle position from pause?
+
+
+    /*add logic switch statement to cycle position and help resume from pause?
+      clean up messy code?
+    */
 
     //Step 1 Retraction 2nd Cyl RIGHT measure T_ret at Presure sensor high
     while ((lowPressure() == true) && (autoMode() == true)) {
@@ -191,6 +197,7 @@ void loop() {
     digitalWrite(SOLENOID_UP, LOW);
 
     if (previousMillis != mainCompTimeAvg) {
+      noFaults = false;
       break;
     }
     mainCompTimeAvg = (mainCompTime + previousMillis) / 2;
