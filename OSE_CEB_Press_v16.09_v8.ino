@@ -40,6 +40,7 @@
 #define COMPRESS_DELAY 500  // 1/2 sec extra to compress brick via main Cyl
 #define K_A_MAIN 0.001  // T_e = T_c * (k_A)    *need to find correct value assuming this method makes sense*
 #define K_A_DRAWER 0.0008 // T_e = T_c * (k_A)    *calculated from [(1.126-1.25)/1.126] = 0.000888
+#define MAXDRIFT 5    //Sets maximum time difference in milliseconds from one cycle to the next for all steps to check for faults
 
 // custom structures, function declarations or prototypes
 bool autoMode();    //function to read if auto mode switch state is ON
@@ -78,18 +79,18 @@ void loop() {
   unsigned long previousMillis = 0;
   //unsigned long currentMillis = 0;
   static unsigned long drawerRetTime = 0;   //measured
-  static unsigned long drawerRetTimeAvg = 0;    //keep running average of drawer Cyl Retraction Time to compare to check for  drift
-  static unsigned long mainRetTimeAvg = 0;    //keep running average of main Cyl Retraction Time to check for  drift
+  static unsigned long drawerRetTimePre = 0;    //keep running average of drawer Cyl Retraction Time to compare to check for  drift
+  static unsigned long mainRetTimePre = 0;    //keep running average of main Cyl Retraction Time to check for  drift
   static unsigned long mainCompTime = 0;   //measured
-  static unsigned long mainCompTimeAvg = 0;    //keep running average of main Cyl Extension Time to compare to check for  drift
+  static unsigned long mainCompTimePre = 0;    //keep running average of main Cyl Extension Time to compare to check for  drift
   unsigned long drawerExtTime;    //calculated from drawer retraction from middle start point to fully contracted
   unsigned long mainRetTime;    //first reatraction measured post brick compression and pre ejection
-  unsigned long drawerMidTime;    //calculated from drawer retraction from middle start point
+  unsigned long drawerMidTime;    //time for retraction from removal point to mid point calculated from step 1 then measured and compared at every cycle.
   //  unsigned long mainMidTime;    //calculated from main ejection extension time from start point
   static float kAMain = K_A_MAIN;   //multiplier Note: if 1 isnt accurate enough for high speeds 2 or 3 could be used instead as opposed to calculus?
   static float kADrawer = K_A_DRAWER;
 
-  //poll selector switch continuously
+  //poll selector switch continuously and check for fault condition at start of every cycle
   while (autoMode() == true && noFaults == true) {
 
     /*add logic switch statement to cycle position and help resume from pause?
@@ -97,7 +98,7 @@ void loop() {
     */
     switch (cycleStep) {
 
-      //Step 1 Retraction 2nd Cyl RIGHT measure T_ret at Presure sensor high
+      //Step 1 Retraction drawer Cyl RIGHT measure T_ret at Presure sensor high
       case 1:
         {
           while ((lowPressure() == true) && (autoMode() == true)) {
@@ -107,117 +108,118 @@ void loop() {
           digitalWrite(SOLENOID_RIGHT, LOW);
           drawerRetTime = millis() - previousMillis;
 
-          /*
-              if (drawerRetTimeAvg == 0) {
-                drawerRetTimeAvg = drawerRetTime;
-                drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
-              } else {
-                drawerRetTimeAvg = ((drawerRetTime + drawerRetTimeAvg) / 2);
-              }
-
-              drawerRetTime = constrain(drawerRetTime, drawerRetTime, drawerRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
-          */
-        }
-
-      //Step 2 Ejection by extending main cyl UP until pressure sensor high measure T_ext
-      case 2:
-        {
-          //Run first cycle calibration main retraction if first cycle or state is set due to faults
-          if (calibrated == false) {
-            while ((lowPressure() == true) && (autoMode() == true)) {
-              previousMillis = millis();
-              digitalWrite(SOLENOID_DOWN, HIGH);
-            }
-            digitalWrite(SOLENOID_DOWN, LOW);
-            mainRetTime = millis() - previousMillis;
-            calibrated = true;
-
-            while ((lowPressure() == true) && (autoMode() == true)) {
-              previousMillis = millis();
-              digitalWrite(SOLENOID_UP, HIGH);
-            }
-            digitalWrite(SOLENOID_UP, LOW);
-            mainCompTime = millis() - previousMillis;
+          if (drawerRetTimePre == 0) {
+            drawerRetTimePre = drawerRetTime;
           }
           else {
-            while ((lowPressure() == true) && (autoMode() == true)) {
-              //previousMillis = millis();
-              digitalWrite(SOLENOID_UP, HIGH);
+            if (drawerRetTime != drawerRetTimePre) {
+              if (max(drawerRetTime, drawerRetTimePre) - min(drawerRetTime, drawerRetTimePre)) > MAXDRIFT) {
+                noFaults = false;
+                break;
+              }
             }
-            digitalWrite(SOLENOID_UP, LOW);
-            //mainRetTime = millis() - previousMillis;
-            /*
-                if (mainRetTimeAvg == 0) {
-                  mainRetTimeAvg = mainRetTime;
-                  mainRetTimeAvg = ((mainRetTime + mainRetTimeAvg) / 2);
-                } else {
-                  mainRetTimeAvg = ((mainRetTime + mainRetTimeAvg) / 2);
-                }
-                mainRetTime = constrain(mainRetTime, mainRetTime, mainRetTimeAvg);    //simple constraint on average time. flexible enough with variable loads?
-            */
-
-
-            //might need to bump main cyl foot down for clearance/pressure release
-            //digitalWrite(SOLENOID_DOWN, HIGH);
-            //delay(100)
-            //digitalWrite(SOLENOID_DOWN, LOW);
           }
-        }
-      //Step 3 Brick Removal 2nd Cyl extended LEFT until Presure sensor high
-      case 3:
-        {
 
-          while ((lowPressure() == true) && (autoMode() == true)) {
-            previousMillis = millis();
-            digitalWrite(SOLENOID_LEFT, HIGH);
+        //Step 2 Ejection by extending main cyl UP until pressure sensor high measure T_ext
+        case 2:
+          {
+            //Run first cycle calibration main retraction if first cycle or state is set due to faults
+            if (calibrated == false) {
+              while ((lowPressure() == true) && (autoMode() == true)) {
+                previousMillis = millis();
+                digitalWrite(SOLENOID_DOWN, HIGH);
+              }
+              digitalWrite(SOLENOID_DOWN, LOW);
+              mainRetTime = millis() - previousMillis;
+              calibrated = true;
+
+              while ((lowPressure() == true) && (autoMode() == true)) {
+                previousMillis = millis();
+                digitalWrite(SOLENOID_UP, HIGH);
+              }
+              digitalWrite(SOLENOID_UP, LOW);
+              mainCompTime = millis() - previousMillis;
+            }
+            else {
+              while ((lowPressure() == true) && (autoMode() == true)) {
+                //previousMillis = millis();
+                digitalWrite(SOLENOID_UP, HIGH);
+              }
+              digitalWrite(SOLENOID_UP, LOW);
+              //mainRetTime = millis() - previousMillis;
+              /*
+                  if (mainRetTimePre == 0) {
+                    mainRetTimePre = mainRetTime;
+                    mainRetTimePre = ((mainRetTime + mainRetTimePre) / 2);
+                  } else {
+                    mainRetTimePre = ((mainRetTime + mainRetTimePre) / 2);
+                  }
+                  mainRetTime = constrain(mainRetTime, mainRetTime, mainRetTimePre);    //simple constraint on average time. flexible enough with variable loads?
+              */
+
+
+              //might need to bump main cyl foot down for clearance/pressure release
+              //digitalWrite(SOLENOID_DOWN, HIGH);
+              //delay(100)
+              //digitalWrite(SOLENOID_DOWN, LOW);
+            }
           }
-          digitalWrite(SOLENOID_LEFT, LOW);
-
-        //Step 4 Soil Load main Cyl moves DOWN/retracts and soil enters chamber
-        case 4:
+        //Step 3 Brick Removal 2nd Cyl extended LEFT until Presure sensor high
+        case 3:
           {
 
             while ((lowPressure() == true) && (autoMode() == true)) {
-              //mainMidTime = mainCompTime / kAMain;   //add serial out for debugging math
               previousMillis = millis();
-              //while ((millis() - previousMillis) <= mainMidTime) {
-              digitalWrite(SOLENOID_DOWN, HIGH);
+              digitalWrite(SOLENOID_LEFT, HIGH);
             }
-            digitalWrite(SOLENOID_DOWN, LOW);
-          }
-        }
+            digitalWrite(SOLENOID_LEFT, LOW);
 
-      //Step 5 Chamber/Drawer Closure drawer retraction time to midpoint is calculated from initial full contraction from the midpoint (step 1 measurement)
-      case 5:
-        {
+          //Step 4 Soil Load main Cyl moves DOWN/retracts and soil enters chamber
+          case 4:
+            {
 
-          while ((lowPressure() == true) && (autoMode() == true)) {
-            drawerMidTime = drawerExtTime / kADrawer ;      //add serial out for debugging math
-            previousMillis = millis();
-            while ((millis() - previousMillis) <= drawerMidTime) {
-              digitalWrite(SOLENOID_RIGHT, HIGH);
+              while ((lowPressure() == true) && (autoMode() == true)) {
+                //mainMidTime = mainCompTime / kAMain;   //add serial out for debugging math
+                previousMillis = millis();
+                //while ((millis() - previousMillis) <= mainMidTime) {
+                digitalWrite(SOLENOID_DOWN, HIGH);
+              }
+              digitalWrite(SOLENOID_DOWN, LOW);
             }
-            digitalWrite(SOLENOID_RIGHT, LOW);
           }
-        }
 
-      //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
-      case 6:
-        {
-          while ((lowPressure() == true) && (autoMode() == true)) {
-            previousMillis = millis();
-            digitalWrite(SOLENOID_UP, HIGH);
-          }
-          previousMillis = millis() - previousMillis;
-          mainCompTime = previousMillis;
-          delay(COMPRESS_DELAY);
-          digitalWrite(SOLENOID_UP, LOW);
+        //Step 5 Chamber/Drawer Closure drawer retraction time to midpoint is calculated from initial full contraction from the midpoint (step 1 measurement)
+        case 5:
+          {
 
-          if (previousMillis != mainCompTimeAvg) {
-            noFaults = false;
-            break;
+            while ((lowPressure() == true) && (autoMode() == true)) {
+              drawerMidTime = drawerExtTime / kADrawer ;      //add serial out for debugging math
+              previousMillis = millis();
+              while ((millis() - previousMillis) <= drawerMidTime) {
+                digitalWrite(SOLENOID_RIGHT, HIGH);
+              }
+              digitalWrite(SOLENOID_RIGHT, LOW);
+            }
           }
-          mainCompTimeAvg = (mainCompTime + previousMillis) / 2;
+
+        //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+        case 6:
+          {
+            while ((lowPressure() == true) && (autoMode() == true)) {
+              previousMillis = millis();
+              digitalWrite(SOLENOID_UP, HIGH);
+            }
+            previousMillis = millis() - previousMillis;
+            mainCompTime = previousMillis;
+            delay(COMPRESS_DELAY);
+            digitalWrite(SOLENOID_UP, LOW);
+
+            if (previousMillis != mainCompTimePre) {
+              noFaults = false;
+              break;
+            }
+            mainCompTimePre = (mainCompTime + previousMillis) / 2;
+          }
         }
     }
   }
