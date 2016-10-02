@@ -11,8 +11,7 @@
   User must manually compress brick(s) to verify correct machine function before engaging Auto Mode.
   Alpha version can test making full size bricks to verify feasibility of timed operations.
   Serial Outputs can used to wacth timing variables of the machine during operation.
-
-  Code is written for novice readability and not code efficiency. Not much encapsulation. Math is written in longer form etc.
+  Code is written for novice readability and not code efficiency so not enough encapsulation, math is written in longer form etc.
 
   Contributions by:
   Abe Anderson
@@ -90,7 +89,7 @@ void loop() {
 
   //poll selector switch continuously
   while (autoMode() == true && noFaults == true) {
-    //add switch to recall to cycle position from interrupt?
+    //add switch to recall to cycle position from pause?
 
     //Step 1 Retraction 2nd Cyl RIGHT measure T_ret at Presure sensor high
     while ((lowPressure() == true) && (autoMode() == true)) {
@@ -99,6 +98,7 @@ void loop() {
     }
     digitalWrite(SOLENOID_RIGHT, LOW);
     drawerRetTime = millis() - previousMillis;
+
     /*
         if (drawerRetTimeAvg == 0) {
           drawerRetTimeAvg = drawerRetTime;
@@ -114,17 +114,27 @@ void loop() {
     //Run first cycle calibration main retraction if first cycle or state is set due to faults
     if (calibrated == false) {
       while ((lowPressure() == true) && (autoMode() == true)) {
-
+        previousMillis = millis();
+        digitalWrite(SOLENOID_DOWN, HIGH);
       }
+      digitalWrite(SOLENOID_DOWN, LOW);
+      mainRetTime = millis() - previousMillis;
       calibrated = true;
-    }
-    else {
+
       while ((lowPressure() == true) && (autoMode() == true)) {
         previousMillis = millis();
         digitalWrite(SOLENOID_UP, HIGH);
       }
       digitalWrite(SOLENOID_UP, LOW);
-      mainRetTime = millis() - previousMillis;
+      mainCompTime = millis() - previousMillis;
+    }
+    else {
+      while ((lowPressure() == true) && (autoMode() == true)) {
+        //previousMillis = millis();
+        digitalWrite(SOLENOID_UP, HIGH);
+      }
+      digitalWrite(SOLENOID_UP, LOW);
+      //mainRetTime = millis() - previousMillis;
       /*
           if (mainRetTimeAvg == 0) {
             mainRetTimeAvg = mainRetTime;
@@ -175,12 +185,15 @@ void loop() {
       previousMillis = millis();
       digitalWrite(SOLENOID_UP, HIGH);
     }
+    previousMillis = millis() - previousMillis;
+    mainCompTime = previousMillis;
     delay(COMPRESS_DELAY);
     digitalWrite(SOLENOID_UP, LOW);
-    previousMillis = millis() - previousMillis;
+
     if (previousMillis != mainCompTimeAvg) {
       break;
     }
+    mainCompTimeAvg = (mainCompTime + previousMillis) / 2;
 
 
 
