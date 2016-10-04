@@ -27,28 +27,27 @@
 
   License:
   See GPLv3 license file in repo.
-  Hmm thought this was best copyleft, but previous code was CC-BY-SA need to double check
-
 */
 
-//includes     *need to make sure correct Teensy libs get included if any are needed
-//Teensyduino add-on software v1.30 is compatible with arduino IDE 1.6.11
-//#include "Aurduino.h"
 
-//Heavy use of defines may make it easier for non coders to make adjustments for troubleshooting and custom changes
+//defines to make it easier for non coders to make adjustments for troubleshooting and custom changes
 
-#define MODE_SELECT 9    //This is for the 3 position SPDT switch for Manual/OFF/Auto in docs for prior build and code shows switch auto on pin 16 and a Auto/Manual on pin 9 or pin 8 doc slide 31 and 32 differ??
-#define SOLENOID_RIGHT 23
-#define SOLENOID_LEFT 24
-#define SOLENOID_DOWN 25
-#define SOLENOID_UP 26
-#define PRESSURE_SENSOR 38  //A0 F0 10 bit A2D converter
+#define SOLENOID_RIGHT 5   //swap these pin numbers for wire inversion      (deafult pin 5)
+#define SOLENOID_LEFT 4    //    (default pin 4)
+
+#define SOLENOID_DOWN 15    //swap these pin numbers for wire inversion   (default pin 15)
+#define SOLENOID_UP 14      //    (default pin 14)
+
+#define MODE_SELECT 7    //This is for the 3 position SPDT switch for Manual/OFF/Auto
+#define PRESSURE_SENSOR 41  //labeled A3 or F3 silkscreen on the PCB
+
 #define SWITCH_DEBOUNCE 3 //milliseconds to delay for switch debounce
 #define PRESSURE_SENSOR_DEBOUNCE 20 //milliseconds to delay for pressure sensor debounce
-#define COMPRESS_DELAY 500  // 1/2 sec extra to compress brick via main Cyl
-#define K_A_MAIN 0.004  // T_e = T_c * (k_A)   for 1.25in x14in cylinder
-#define K_A_DRAWER 0.008 // T_e = T_c * (k_A)  for 2.75in x10in cylinder
-#define MAXDRIFT 5    //Sets maximum time difference in milliseconds from one cycle to the next for all steps to check for faults
+#define COMPRESS_DELAY 500  // 1/2 sec extra to compress brick via main Cyl (default 500ms)
+#define RELEASE_PRESSURE_DELAY 100    //releases pressure from the drawer bottom after compression (default 100ms)
+#define K_A_MAIN 0.004  // T_e = T_c * (k_A)   for 1.25in x14in cylinder  (default 0.004)
+#define K_A_DRAWER 0.008 // T_e = T_c * (k_A)  for 2.75in x10in cylinder  (default 0.008)
+#define MAXDRIFT 5    //Sets maximum time difference in milliseconds from one cycle to the next for all steps to check for faults (default 5ms)
 
 // custom structures, function declarations or prototypes
 bool autoMode();    //function to read if auto mode switch state is ON
@@ -290,7 +289,7 @@ void loop() {
           drawerMidTimePre =  drawerMidTime;
         }
 
-      //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay
+      //Step 6 Brick Pressing Main Cyl moves to T_ext + 1/2 sec compression delay and pressure release
       case 6:
         {
           while ((lowPressure() == true) && (autoMode() == true)) {
@@ -301,6 +300,11 @@ void loop() {
           mainCompTime = previousMillis;
           delay(COMPRESS_DELAY);
           digitalWrite(SOLENOID_UP, LOW);
+
+          //release pressure from drawer
+          digitalWrite(SOLENOID_DOWN, HIGH);
+          delay(RELEASE_PRESSURE_DELAY);
+          digitalWrite(SOLENOID_DOWN, LOW);
 
           if ( mainCompTimePre == 0) {
             mainCompTimePre =  mainCompTime;
