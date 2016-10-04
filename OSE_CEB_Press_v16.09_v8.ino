@@ -16,8 +16,6 @@
 
   Auto mode does a main Cyl calibration by position against a user pressed brick to calibrate for brick thickness.
 
-  Serial Outputs will be added to wacth timing variables of the machine during operation using a USB connection to the MC.
-
   Purposefully wrote the code for novice readability? and not code efficiency
   so not enough encapsulation, math is written in longer form etc. Mmm copy pasta.
   Despite the mess it might help with any intial troubleshooting?
@@ -39,7 +37,7 @@
 
 //Heavy use of defines may make it easier for non coders to make adjustments for troubleshooting and custom changes
 
-#define MODE_SELECT 9    //in docs for prior build and code shows switch auto on pin 16 and a Auto/Manual on pin 9 or pin 8 doc slide 31 and 32 differ??
+#define MODE_SELECT 9    //This is for the 3 position SPDT switch for Manual/OFF/Auto in docs for prior build and code shows switch auto on pin 16 and a Auto/Manual on pin 9 or pin 8 doc slide 31 and 32 differ??
 #define SOLENOID_RIGHT 23
 #define SOLENOID_LEFT 24
 #define SOLENOID_DOWN 25
@@ -87,10 +85,7 @@ void loop() {
   static bool noFaults = true;    //state of fault tracking
   static bool calibrated = false;   //sets state for first cycle calibration of main Cyl
   unsigned long previousMillis = 0;
-  //unsigned long currentMillis = 0;
-  /*
-    Need to find max expected size of values and reduce unnecessary static unsigned longs etc. for execution efficiency
-  */
+
   static unsigned long drawerRetTime = 0;   //measured
   static unsigned long drawerRetTimePre = 0;    //keep previous time of drawer Cyl Retraction Time to compare to check for  drift
 
@@ -124,9 +119,6 @@ void loop() {
   //poll selector switch continuously and check for fault condition at start of every cycle
   while (autoMode() == true && noFaults == true) {
 
-    /*add logic switch statement to cycle position and help resume from pause?
-      clean up messy code?
-    */
     switch (cycleStep) {
 
       //Step 1 Retraction drawer Cyl RIGHT measure T_ret at Presure sensor high or calibrate main retraction if first cycle or faults
