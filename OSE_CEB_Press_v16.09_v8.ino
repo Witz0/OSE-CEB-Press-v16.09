@@ -116,6 +116,11 @@ void loop() {
   unsigned long maximum = 0;    //and compare values
   byte drift = 0;               //for timing drift tracking
 
+  //resets faults if user turns off auto mode
+  if ((autoMode() == false) &&  noFaults == false) {
+    noFaults = true;
+  }
+
   //poll selector switch continuously and check for fault condition at start of every cycle
   while (autoMode() == true && noFaults == true) {
 
@@ -123,11 +128,6 @@ void loop() {
       clean up messy code?
     */
     switch (cycleStep) {
-
-        //resets faults if user turns off auto mode
-        if ((autoMode() == false) &&  noFaults == false) {
-          noFaults = true;
-        }
 
       //Step 1 Retraction drawer Cyl RIGHT measure T_ret at Presure sensor high or calibrate main retraction if first cycle or faults
       case 1:
