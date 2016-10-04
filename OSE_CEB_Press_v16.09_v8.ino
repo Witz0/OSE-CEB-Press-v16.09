@@ -3,22 +3,21 @@
   controls MOSFET's HIGH/LOW to control two 3 position hydraulic solenoids,
   measures piston motion time relative to pressure sensor trigger,
   and repeats cycle while auto calibrating timing from previous cycles and startup positions.
-  
+
   Compensates for difference in time for Extension and Contraction of Rods.
   T_extend = T_contract  * (A_cyl - A_rod) / A_cyl)
-  
+
   Detects lack of soil by extreme extent of main Cylinder during compression step
   and other faults by comparing previous times to current timing.
-  
-  Faults require manual user intervention to reset to step starting position
-  or to first calibration position if power is lost to controller.
-  
+
+  Faults require manual user intervention to reset to step starting position of that step or manual recalibration if power is lost to controller.
+
   User must manually compress brick(s) to verify correct machine function before engaging Auto Mode.
-  
+
   Auto mode does a main Cyl calibration by position against a user pressed brick to calibrate for brick thickness.
-      
+
   Serial Outputs will be added to wacth timing variables of the machine during operation using a USB connection to the MC.
-  
+
   Purposefully wrote the code for novice readability? and not code efficiency
   so not enough encapsulation, math is written in longer form etc. Mmm copy pasta.
   Despite the mess it might help with any intial troubleshooting?
@@ -40,7 +39,7 @@
 
 //Heavy use of defines may make it easier for non coders to make adjustments for troubleshooting and custom changes
 
-#define MODE_SELECT 16    //in docs for prior build and code shows switch auto on pin 16 and a Auto/Manual on pin 9 or pin 8 doc slide 31 and 32 differ??
+#define MODE_SELECT 9    //in docs for prior build and code shows switch auto on pin 16 and a Auto/Manual on pin 9 or pin 8 doc slide 31 and 32 differ??
 #define SOLENOID_RIGHT 23
 #define SOLENOID_LEFT 24
 #define SOLENOID_DOWN 25
@@ -49,8 +48,8 @@
 #define SWITCH_DEBOUNCE 3 //milliseconds to delay for switch debounce
 #define PRESSURE_SENSOR_DEBOUNCE 20 //milliseconds to delay for pressure sensor debounce
 #define COMPRESS_DELAY 500  // 1/2 sec extra to compress brick via main Cyl
-#define K_A_MAIN 0.001  // T_e = T_c * (k_A)    *need to find correct value assuming this method makes sense*
-#define K_A_DRAWER 0.0008 // T_e = T_c * (k_A)    *calculated from [(1.126-1.25)/1.126] = 0.000888
+#define K_A_MAIN 0.004  // T_e = T_c * (k_A)   for 1.25in x14in cylinder
+#define K_A_DRAWER 0.008 // T_e = T_c * (k_A)  for 2.75in x10in cylinder
 #define MAXDRIFT 5    //Sets maximum time difference in milliseconds from one cycle to the next for all steps to check for faults
 
 // custom structures, function declarations or prototypes
@@ -124,6 +123,11 @@ void loop() {
       clean up messy code?
     */
     switch (cycleStep) {
+
+        //resets faults if user turns off auto mode
+        if ((autoMode() == false) &&  noFaults == false) {
+          noFaults = true;
+        }
 
       //Step 1 Retraction drawer Cyl RIGHT measure T_ret at Presure sensor high or calibrate main retraction if first cycle or faults
       case 1:
